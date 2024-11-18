@@ -1,11 +1,10 @@
-```json
 {
-  "name": "mailing-list",
+  "name": "subscribe",
   "version": "1.0.0",
-  "main": "src/index.js",
+  "main": "index.js",
   "scripts": {
-    "start": "node src/index.js",
-    "dev": "nodemon src/index.js"
+    "start": "node index.js",
+    "dev": "nodemon index.js"
   },
   "dependencies": {
     "body-parser": "^1.20.3",
@@ -18,4 +17,3 @@
     "nodemon": "^3.0.1"
   }
 }
-```
