@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Subscriber Management - Euterpe's Mailing List</title>
+    <style>
+        body {
+            font-family: 'Times New Roman', Times, serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #ffffff;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            color: #000000;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+
+        .stats {
+            margin-bottom: 30px;
+            padding: 20px;
+            border: 1px solid #000000;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            background-color: #ffffff;
+        }
+
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border: 1px solid #000000;
+        }
+
+        th {
+            background-color: #f8f8f8;
+        }
+
+        .delete-btn {
+            background-color: #ffffff;
+            color: #000000;
+            border: 1px solid #000000;
+            padding: 5px 10px;
+            cursor: pointer;
+            font-family: inherit;
+        }
+
+        .delete-btn:hover {
+            background-color: #000000;
+            color: #ffffff;
+        }
+
+        .export-btn {
+            background-color: #ffffff;
+            color: #000000;
+            border: 1px solid #000000;
+            padding: 10px 20px;
+            cursor: pointer;
+            font-family: inherit;
+            margin-bottom: 20px;
+        }
+
+        .export-btn:hover {
+            background-color: #000000;
+            color: #ffffff;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Subscriber Management</h1>
+        
+        <div class="stats">
+            <strong>Total Subscribers:</strong> <span id="totalSubscribers">0</span>
+        </div>
+
+        <button class="export-btn" onclick="exportToCSV()">Export to CSV</button>
+        
+        <table>
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Email</th>
+                    <th>Date Subscribed</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody id="subscribersList">
+            </tbody>
+        </table>
+    </div>
+
+    <script>
+        let subscribers = [];
+
+        async function loadSubscribers() {
+            try {
+                const response = await fetch('/api/subscribers');
+                subscribers = await response.json();
+                
+                const tbody = document.getElementById('subscribersList');
+                tbody.innerHTML = '';
+                
+                subscribers.forEach(sub => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${sub.name || '-'}</td>
+                        <td>${sub.email}</td>
+                        <td>${new Date(sub.subscribeDate).toLocaleDateString()}</td>
+                        <td>
+                            <button class="delete-btn" onclick="deleteSubscriber('${sub._id}')">
+                                Delete
+                            </button>
+                        </td>
+                    `;
+                    tbody.appendChild(row);
+                });
+
+                document.getElementById('totalSubscribers').textContent = subscribers.length;
+            } catch (error) {
+                console.error('Error loading subscribers:', error);
+            }
+        }
+
+        async function deleteSubscriber(id) {
+            if (!confirm('Are you sure you want to delete this subscriber?')) return;
+            
+            try {
+                const response = await fetch(`/api/subscribers/${id}`, {
+                    method: 'DELETE'
+                });
+                
+                if (response.ok) {
+                    loadSubscribers();
+                }
+            } catch (error) {
+                console.error('Error deleting subscriber:', error);
+            }
+        }
+
+        function exportToCSV() {
+            const headers = ['Name', 'Email', 'Date Subscribed'];
+            const csvData = subscribers.map(sub => [
+                sub.name || '',
+                sub.email,
+                new Date(sub.subscribeDate).toLocaleDateString()
+            ]);
+            
+            const csvContent = [
+                headers.join(','),
+                ...csvData.map(row => row.join(','))
+            ].join('\n');
+            
+            const blob = new Blob([csvContent], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'subscribers.csv';
+            a.click();
+            window.URL.revokeObjectURL(url);
+        }
+
+        // Load subscribers when page loads
+        loadSubscribers();
+    </script>
+</body>
+</html>

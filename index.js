@@ -42,46 +42,78 @@ const subscriberSchema = new mongoose.Schema({
 const Subscriber = mongoose.model('Subscriber', subscriberSchema);
 
 // Middleware
-app.use(cors({
-  origin: '*', // Be more specific in production
-  methods: ['GET', 'POST'],
-  allowedHeaders: ['Content-Type']
-})); 
-
+app.use(cors()); 
 app.use(bodyParser.json());
 app.use(express.static('public'));
 
-// Debug middleware
-app.use((req, res, next) => {
-  console.log(`${new Date().toISOString()} - ${req.method} ${req.path}`, req.body);
-  next();
-});
+// Basic auth middleware
+const basicAuth = (req, res, next) => {
+  const auth = req.headers.authorization;
+  
+  if (!auth || !auth.startsWith('Basic ')) {
+    res.setHeader('WWW-Authenticate', 'Basic realm="Admin Access"');
+    return res.status(401).json({ message: 'Authentication required' });
+  }
 
-// Routes
+  const credentials = Buffer.from(auth.split(' ')[1], 'base64').toString().split(':');
+  const username = credentials[0];
+  const password = credentials[1];
+
+  // Replace these with your desired admin credentials
+  if (username === 'admin' && password === 'euterpe2024') {
+    next();
+  } else {
+    res.setHeader('WWW-Authenticate', 'Basic realm="Admin Access"');
+    return res.status(401).json({ message: 'Invalid credentials' });
+  }
+};
+
+// Existing routes
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'public/index.html'));
 });
 
 app.post('/subscribe', async (req, res) => {
-  console.log('Received subscription request:', req.body);
-  
   try {
-    if (!req.body.email) {
-      return res.status(400).json({ message: 'Email is required' });
-    }
-
     const { email, name } = req.body;
     const subscriber = new Subscriber({ email, name });
     await subscriber.save();
-    console.log('Successfully saved subscriber:', email);
     res.status(201).json({ message: 'Successfully subscribed!' });
   } catch (error) {
-    console.error('Subscription error:', error);
     if (error.code === 11000) {
       res.status(400).json({ message: 'Email already subscribed' });
     } else {
+      console.error('Subscription error:', error);
       res.status(500).json({ message: 'Server error' });
     }
+  }
+});
+
+// Admin routes
+app.get('/admin', basicAuth, (req, res) => {
+  res.sendFile(path.join(__dirname, 'public/admin.html'));
+});
+
+app.get('/api/subscribers', basicAuth, async (req, res) => {
+  try {
+    const subscribers = await Subscriber.find()
+      .sort({ subscribeDate: -1 }) // Sort by date, newest first
+      .select('-__v'); // Exclude version field
+    res.json(subscribers);
+  } catch (error) {
+    console.error('Error fetching subscribers:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Delete subscriber
+app.delete('/api/subscribers/:id', basicAuth, async (req, res) => {
+  try {
+    await Subscriber.findByIdAndDelete(req.params.id);
+    res.json({ message: 'Subscriber deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting subscriber:', error);
+    res.status(500).json({ message: 'Server error' });
   }
 });
 
