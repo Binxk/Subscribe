@@ -11,7 +11,10 @@ const app = express();
 
 // Helper function to get base URL
 const getBaseUrl = () => {
-    return process.env.SITE_URL || 'http://localhost:3000';
+    // Check for environment variables in order of preference
+    return process.env.SITE_URL || 
+           process.env.RENDER_EXTERNAL_URL || 
+           `http://localhost:${process.env.PORT || 10000}`;
 };
 
 // Helper function to generate unsubscribe token
@@ -421,7 +424,7 @@ app.use((err, req, res, next) => {
     });
 });
 
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
 });
