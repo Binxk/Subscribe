@@ -15,7 +15,6 @@
             align-items: center;
             background-color: #ffffff;
         }
-
         .container {
             max-width: 600px;
             width: 90%;
@@ -24,32 +23,27 @@
             text-align: center;
             border: 1px solid #000000;
         }
-
         h1 {
             font-size: 2.5rem;
             margin-bottom: 2rem;
             color: #000000;
         }
-
         .message {
             font-size: 1.2rem;
             margin-bottom: 2rem;
             line-height: 1.6;
             color: #333;
         }
-
         #status {
             padding: 1rem;
             margin-top: 1rem;
             border: 1px solid #000000;
             display: none;
         }
-
         .success {
             background-color: #ffffff;
             color: #000000;
         }
-
         .error {
             background-color: #ffffff;
             color: #000000;
@@ -62,23 +56,22 @@
         <div class="message">Please wait while we process your request...</div>
         <div id="status"></div>
     </div>
-
     <script>
         document.addEventListener('DOMContentLoaded', async () => {
             const urlParams = new URLSearchParams(window.location.search);
             const email = urlParams.get('email');
             const token = urlParams.get('token');
             const statusDiv = document.getElementById('status');
-
+            
             if (!email || !token) {
                 showError('Invalid unsubscribe link');
                 return;
             }
-
+            
             try {
                 const response = await fetch(`/api/unsubscribe?email=${encodeURIComponent(email)}&token=${encodeURIComponent(token)}`);
                 const data = await response.json();
-
+                
                 if (response.ok) {
                     showSuccess(data.message);
                 } else {
