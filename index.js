@@ -39,14 +39,14 @@ mongoose.connect(MONGODB_URI, {
 // Email template function
 const createWelcomeEmail = (name) => {
     return {
-        subject: 'Welcome to Euterpe\'s email spam',
+        subject: 'Welcome to Euterpe\'s Mailing email spam!',
         text: `Hi ${name},\n\nthank you for letting us send you spam emails about gigs, merch drops, music releases and more.\n\nmost sincere regards,\nEuterpe`,
         html: `
-            <div style="font-family:'Times New Roman', Times, serif; max-width: 600px; margin: 0 auto;">
-                <h2>Welcome to Euterpe\'s spam mail</h2>
+            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+                <h2 style="color: #333;">Welcome to euterpe email spam</h2>
                 <p>Hi ${name},</p>
-                <p>thank you for letting us send you spam emails about gigs, merch drops, music releases and more.\n\nmost sincere regards,\nEuterpe`</p>
-                <p>Most sincerest regards,<br>Euterpe </p>
+                <p>thank you for letting us send you spam emails about gigs, merch drops, music releases and more.</p>
+                <p>most sincere regards,<br>Euterpe</p>
             </div>
         `
     };
