@@ -251,6 +251,17 @@ app.post('/api/send-newsletter', basicAuth, async (req, res) => {
 
 // Serve the unsubscribe page
 app.get('/unsubscribe', (req, res) => {
+    console.log('Unsubscribe request received');
+    console.log('Query params:', req.query);
+    console.log('File path:', path.join(__dirname, 'public/unsubscribe.html'));
+    
+const filePath = path.join(__dirname, 'public/unsubscribe.html');
+    if (require('fs').existsSync(filePath)) {
+        console.log('Unsubscribe.html file exists');
+    } else {
+        console.log('Unsubscribe.html file NOT found');
+    }
+    
     res.sendFile(path.join(__dirname, 'public/unsubscribe.html'));
 });
 
