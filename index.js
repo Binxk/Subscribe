@@ -9,6 +9,11 @@ require('dotenv').config();
 
 const app = express();
 
+// Helper function to get base URL
+const getBaseUrl = () => {
+    return process.env.SITE_URL || 'http://localhost:3000';
+};
+
 // Helper function to generate unsubscribe token
 const generateUnsubscribeToken = (email) => {
     return crypto
@@ -48,7 +53,8 @@ mongoose.connect(MONGODB_URI, {
 // Email template function with unsubscribe link
 const createWelcomeEmail = (name, email) => {
     const unsubscribeToken = generateUnsubscribeToken(email);
-    const unsubscribeUrl = `${process.env.SITE_URL}/unsubscribe?email=${encodeURIComponent(email)}&token=${unsubscribeToken}`;
+    const baseUrl = getBaseUrl();
+    const unsubscribeUrl = `${baseUrl}/unsubscribe?email=${encodeURIComponent(email)}&token=${unsubscribeToken}`;
     
     return {
         subject: 'Welcome to Euterpe\'s Mailing email spam!',
@@ -205,10 +211,11 @@ app.post('/api/send-newsletter', basicAuth, async (req, res) => {
         }
 
         const subscribers = await Subscriber.find({ active: true });
+        const baseUrl = getBaseUrl();
         
         const emailPromises = subscribers.map(subscriber => {
             const unsubscribeToken = generateUnsubscribeToken(subscriber.email);
-            const unsubscribeUrl = `${process.env.SITE_URL}/unsubscribe?email=${encodeURIComponent(subscriber.email)}&token=${unsubscribeToken}`;
+            const unsubscribeUrl = `${baseUrl}/unsubscribe?email=${encodeURIComponent(subscriber.email)}&token=${unsubscribeToken}`;
             
             const emailContent = `
                 ${content}
@@ -298,11 +305,13 @@ app.get('/unsubscribe', async (req, res) => {
 // Email configuration test route
 app.get('/test-email', basicAuth, async (req, res) => {
     try {
+        const testEmailContent = createWelcomeEmail('Test User', process.env.EMAIL_USER);
         await transporter.sendMail({
             from: `"Euterpe Band" <${process.env.EMAIL_USER}>`,
             to: process.env.EMAIL_USER,
-            subject: "Email Configuration Test",
-            text: "If you receive this email, your email configuration is working correctly!"
+            subject: testEmailContent.subject,
+            text: testEmailContent.text,
+            html: testEmailContent.html
         });
         res.json({ message: 'Test email sent successfully' });
     } catch (error) {
