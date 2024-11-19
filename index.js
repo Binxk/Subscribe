@@ -101,10 +101,10 @@ const subscriberSchema = new mongoose.Schema({
 
 const Subscriber = mongoose.model('Subscriber', subscriberSchema);
 
-// Middleware
+// Middleware setup - IMPORTANT: Order matters!
 app.use(cors());
 app.use(bodyParser.json());
-app.use(express.static('public'));
+app.use(express.static(path.join(__dirname, 'public')));
 
 // Basic auth middleware
 const basicAuth = (req, res, next) => {
@@ -137,16 +137,13 @@ app.post('/subscribe', async (req, res) => {
     try {
         const { email, name } = req.body;
 
-        // Input validation
         if (!email || !name) {
             return res.status(400).json({ message: 'Email and name are required' });
         }
 
-        // Create new subscriber
         const subscriber = new Subscriber({ email, name });
         await subscriber.save();
 
-        // Send welcome email
         const emailContent = createWelcomeEmail(name, email);
         await transporter.sendMail({
             from: `"Euterpe" <${process.env.EMAIL_USER}>`,
@@ -249,19 +246,8 @@ app.post('/api/send-newsletter', basicAuth, async (req, res) => {
     }
 });
 
-// Serve the unsubscribe page
+// Unsubscribe page route
 app.get('/unsubscribe', (req, res) => {
-    console.log('Unsubscribe request received');
-    console.log('Query params:', req.query);
-    console.log('File path:', path.join(__dirname, 'public/unsubscribe.html'));
-    
-const filePath = path.join(__dirname, 'public/unsubscribe.html');
-    if (require('fs').existsSync(filePath)) {
-        console.log('Unsubscribe.html file exists');
-    } else {
-        console.log('Unsubscribe.html file NOT found');
-    }
-    
     res.sendFile(path.join(__dirname, 'public/unsubscribe.html'));
 });
 
