@@ -247,32 +247,115 @@ app.post('/api/send-newsletter', basicAuth, async (req, res) => {
 });
 
 // Unsubscribe page route
-
+// Replace your current unsubscribe route with this:
 app.get('/unsubscribe', (req, res) => {
     console.log('Unsubscribe request received');
-    console.log('Current directory:', __dirname);
-    console.log('Full path:', path.join(__dirname, 'public/unsubscribe.html'));
+    const { email, token } = req.query;
     
-    // Check if file exists
-    const filePath = path.join(__dirname, 'public/unsubscribe.html');
-    const fs = require('fs');
-    
-    if (fs.existsSync(filePath)) {
-        console.log('File exists');
-        res.sendFile(filePath);
-    } else {
-        console.log('File NOT found');
-        // Send a more helpful response if file is not found
-        res.status(404).send(`
-            <html>
-                <body>
-                    <h1>Setup Required</h1>
-                    <p>The unsubscribe.html file was not found in the public directory.</p>
-                    <p>Current path searched: ${filePath}</p>
-                </body>
-            </html>
-        `);
-    }
+    // Send HTML directly instead of trying to serve a file
+    res.send(`
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Unsubscribe - Euterpe</title>
+    <style>
+        body {
+            font-family: 'Times New Roman', Times, serif;
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background-color: #ffffff;
+        }
+        .container {
+            max-width: 600px;
+            width: 90%;
+            margin: 2rem auto;
+            padding: 2rem;
+            text-align: center;
+            border: 1px solid #000000;
+        }
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 2rem;
+            color: #000000;
+        }
+        .message {
+            font-size: 1.2rem;
+            margin-bottom: 2rem;
+            line-height: 1.6;
+            color: #333;
+        }
+        #status {
+            padding: 1rem;
+            margin-top: 1rem;
+            border: 1px solid #000000;
+            display: none;
+        }
+        .success {
+            background-color: #ffffff;
+            color: #000000;
+        }
+        .error {
+            background-color: #ffffff;
+            color: #000000;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Unsubscribe from Euterpe's Mailing List</h1>
+        <div class="message">Please wait while we process your request...</div>
+        <div id="status"></div>
+    </div>
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            const email = "${email}";
+            const token = "${token}";
+            
+            if (!email || !token) {
+                showError('Invalid unsubscribe link');
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/unsubscribe?email=' + encodeURIComponent(email) + '&token=' + encodeURIComponent(token));
+                const data = await response.json();
+                
+                if (response.ok) {
+                    showSuccess(data.message);
+                } else {
+                    showError(data.message);
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                showError('An error occurred while processing your request');
+            }
+        });
+
+        function showSuccess(message) {
+            const messageDiv = document.querySelector('.message');
+            const statusDiv = document.getElementById('status');
+            messageDiv.textContent = message || 'You have been successfully unsubscribed.';
+            statusDiv.className = 'success';
+            statusDiv.style.display = 'block';
+        }
+
+        function showError(message) {
+            const messageDiv = document.querySelector('.message');
+            const statusDiv = document.getElementById('status');
+            messageDiv.textContent = message || 'An error occurred.';
+            statusDiv.className = 'error';
+            statusDiv.style.display = 'block';
+        }
+    </script>
+</body>
+</html>
+    `);
 });
 
 
