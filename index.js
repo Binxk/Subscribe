@@ -42,7 +42,7 @@ const createWelcomeEmail = (name) => {
         subject: 'Welcome to Euterpe\'s Mailing email spam!',
         text: `Hi ${name},\n\nthank you for letting us send you spam emails about gigs, merch drops, music releases and more.\n\nmost sincere regards,\nEuterpe`,
         html: `
-            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+            <div style="font-family: 'Times New Roman', Times, serif; max-width: 600px; margin: 0 auto; padding: 20px;">
                 <h2 style="color: #333;">Welcome to euterpe email spam</h2>
                 <p>Hi ${name},</p>
                 <p>thank you for letting us send you spam emails about gigs, merch drops, music releases and more.</p>
