@@ -18,7 +18,7 @@ const getBaseUrl = () => {
 const generateUnsubscribeToken = (email) => {
     return crypto
         .createHash('sha256')
-        .update(email + process.env.EMAIL_SECRET)
+        .update(email + (process.env.EMAIL_SECRET || 'default-secret-key'))
         .digest('hex');
 };
 
@@ -249,56 +249,39 @@ app.post('/api/send-newsletter', basicAuth, async (req, res) => {
     }
 });
 
-// Unsubscribe route
-app.get('/unsubscribe', async (req, res) => {
+// Serve the unsubscribe page
+app.get('/unsubscribe', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public/unsubscribe.html'));
+});
+
+// API endpoint for handling unsubscribe requests
+app.get('/api/unsubscribe', async (req, res) => {
     try {
         const { email, token } = req.query;
         
         if (!email || !token) {
-            return res.status(400).send('Invalid unsubscribe link');
+            return res.status(400).json({ message: 'Invalid unsubscribe link' });
         }
 
         // Verify token
         const expectedToken = generateUnsubscribeToken(email);
         if (token !== expectedToken) {
-            return res.status(400).send('Invalid unsubscribe link');
+            return res.status(400).json({ message: 'Invalid unsubscribe link' });
         }
 
         // Update subscriber status
         const subscriber = await Subscriber.findOne({ email });
         if (!subscriber) {
-            return res.status(404).send('Subscriber not found');
+            return res.status(404).json({ message: 'Subscriber not found' });
         }
 
         subscriber.active = false;
         await subscriber.save();
 
-        // Send confirmation page
-        res.send(`
-            <!DOCTYPE html>
-            <html>
-            <head>
-                <title>Unsubscribed</title>
-                <style>
-                    body {
-                        font-family: 'Times New Roman', Times, serif;
-                        max-width: 600px;
-                        margin: 40px auto;
-                        padding: 20px;
-                        text-align: center;
-                    }
-                </style>
-            </head>
-            <body>
-                <h1>Successfully Unsubscribed</h1>
-                <p>You have been unsubscribed from Euterpe's mailing list.</p>
-                <p>We're sorry to see you go!</p>
-            </body>
-            </html>
-        `);
+        res.json({ message: 'You have been successfully unsubscribed from Euterpe\'s mailing list.' });
     } catch (error) {
         console.error('Unsubscribe error:', error);
-        res.status(500).send('Error processing unsubscribe request');
+        res.status(500).json({ message: 'Error processing unsubscribe request' });
     }
 });
 
