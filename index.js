@@ -4,9 +4,18 @@ const mongoose = require('mongoose');
 const bodyParser = require('body-parser');
 const path = require('path');
 const nodemailer = require('nodemailer');
+const crypto = require('crypto');
 require('dotenv').config();
 
 const app = express();
+
+// Helper function to generate unsubscribe token
+const generateUnsubscribeToken = (email) => {
+    return crypto
+        .createHash('sha256')
+        .update(email + process.env.EMAIL_SECRET)
+        .digest('hex');
+};
 
 // Email transporter setup for Namecheap Private Email
 const transporter = nodemailer.createTransport({
@@ -36,17 +45,26 @@ mongoose.connect(MONGODB_URI, {
 .then(() => console.log('Connected to MongoDB'))
 .catch(err => console.error('MongoDB connection error:', err));
 
-// Email template function
-const createWelcomeEmail = (name) => {
+// Email template function with unsubscribe link
+const createWelcomeEmail = (name, email) => {
+    const unsubscribeToken = generateUnsubscribeToken(email);
+    const unsubscribeUrl = `${process.env.SITE_URL}/unsubscribe?email=${encodeURIComponent(email)}&token=${unsubscribeToken}`;
+    
     return {
         subject: 'Welcome to Euterpe\'s Mailing email spam!',
-        text: `Hi ${name},\n\nthank you for letting us send you spam emails about gigs, merch drops, music releases and more.\n\nmost sincere regards,\nEuterpe`,
+        text: `Hi ${name},\n\nthank you for letting us send you spam emails about gigs, merch drops, music releases and more.\n\nmost sincere regards,\nEuterpe\n\nTo unsubscribe, visit: ${unsubscribeUrl}`,
         html: `
             <div style="font-family: 'Times New Roman', Times, serif; max-width: 600px; margin: 0 auto; padding: 20px;">
                 <h2 style="color: #333;">Welcome to euterpe email spam</h2>
                 <p>Hi ${name},</p>
                 <p>thank you for letting us send you spam emails about gigs, merch drops, music releases and more.</p>
                 <p>most sincere regards,<br>Euterpe</p>
+                <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #eee;">
+                    <p style="font-size: 12px; color: #666;">
+                        Don't want to receive these emails? 
+                        <a href="${unsubscribeUrl}" style="color: #333;">Unsubscribe here</a>
+                    </p>
+                </div>
             </div>
         `
     };
@@ -123,7 +141,7 @@ app.post('/subscribe', async (req, res) => {
         await subscriber.save();
 
         // Send welcome email
-        const emailContent = createWelcomeEmail(name);
+        const emailContent = createWelcomeEmail(name, email);
         await transporter.sendMail({
             from: `"Euterpe" <${process.env.EMAIL_USER}>`,
             to: email,
@@ -177,25 +195,36 @@ app.delete('/api/subscribers/:id', basicAuth, async (req, res) => {
     }
 });
 
-// Send newsletter
+// Send newsletter with unsubscribe link
 app.post('/api/send-newsletter', basicAuth, async (req, res) => {
     try {
         const { subject, content } = req.body;
         
         if (!subject || !content) {
-            return res.status(400).json({ 
-                message: 'Subject and content are required' 
-            });
+            return res.status(400).json({ message: 'Subject and content are required' });
         }
 
         const subscribers = await Subscriber.find({ active: true });
         
         const emailPromises = subscribers.map(subscriber => {
+            const unsubscribeToken = generateUnsubscribeToken(subscriber.email);
+            const unsubscribeUrl = `${process.env.SITE_URL}/unsubscribe?email=${encodeURIComponent(subscriber.email)}&token=${unsubscribeToken}`;
+            
+            const emailContent = `
+                ${content}
+                <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #eee;">
+                    <p style="font-size: 12px; color: #666;">
+                        Don't want to receive these emails? 
+                        <a href="${unsubscribeUrl}" style="color: #333;">Unsubscribe here</a>
+                    </p>
+                </div>
+            `;
+
             return transporter.sendMail({
                 from: `"Euterpe" <${process.env.EMAIL_USER}>`,
                 to: subscriber.email,
                 subject: subject,
-                html: content
+                html: emailContent
             });
         });
 
@@ -210,6 +239,59 @@ app.post('/api/send-newsletter', basicAuth, async (req, res) => {
             message: 'Error sending newsletter',
             error: error.message
         });
+    }
+});
+
+// Unsubscribe route
+app.get('/unsubscribe', async (req, res) => {
+    try {
+        const { email, token } = req.query;
+        
+        if (!email || !token) {
+            return res.status(400).send('Invalid unsubscribe link');
+        }
+
+        // Verify token
+        const expectedToken = generateUnsubscribeToken(email);
+        if (token !== expectedToken) {
+            return res.status(400).send('Invalid unsubscribe link');
+        }
+
+        // Update subscriber status
+        const subscriber = await Subscriber.findOne({ email });
+        if (!subscriber) {
+            return res.status(404).send('Subscriber not found');
+        }
+
+        subscriber.active = false;
+        await subscriber.save();
+
+        // Send confirmation page
+        res.send(`
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <title>Unsubscribed</title>
+                <style>
+                    body {
+                        font-family: 'Times New Roman', Times, serif;
+                        max-width: 600px;
+                        margin: 40px auto;
+                        padding: 20px;
+                        text-align: center;
+                    }
+                </style>
+            </head>
+            <body>
+                <h1>Successfully Unsubscribed</h1>
+                <p>You have been unsubscribed from Euterpe's mailing list.</p>
+                <p>We're sorry to see you go!</p>
+            </body>
+            </html>
+        `);
+    } catch (error) {
+        console.error('Unsubscribe error:', error);
+        res.status(500).send('Error processing unsubscribe request');
     }
 });
 
